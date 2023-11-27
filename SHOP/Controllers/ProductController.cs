@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SHOP.Data;
@@ -6,11 +7,12 @@ using SHOP.Models;
 
 namespace SHOP.Controllers
 {
-    [Route("products")]
+    [Route("V1/products")]
     public class ProductController : ControllerBase
     {
         [HttpGet]
         [Route("")]
+        [AllowAnonymous]
         public async Task<ActionResult<List<Product>>> Get([FromServices] DataContext context)
         {
             var products = await context.Products.Include(c => c.Category).AsNoTracking().ToListAsync();
@@ -20,6 +22,7 @@ namespace SHOP.Controllers
 
         [HttpGet]
         [Route("{id:int}")]
+        [AllowAnonymous]
         public async Task<ActionResult<Product>> GetById(int id, [FromServices] DataContext context)
         {
             var products = await context.Products.Include(c => c.Category).AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
@@ -29,6 +32,7 @@ namespace SHOP.Controllers
 
         [HttpGet]
         [Route("categories/{id:int}")]
+        [AllowAnonymous]
         public async Task<ActionResult<Product>> GetByCategory(int id, [FromServices] DataContext context)
         {
             var products = await context.Products.Include(c => c.Category).AsNoTracking().Where(c => c.CategoryId == id).ToListAsync();
@@ -36,6 +40,9 @@ namespace SHOP.Controllers
             return Ok(products);
         }
 
+        [HttpPost]
+        [Route("")]
+        [Authorize(Roles = "employee")]
         public async Task<ActionResult<Product>> Post([FromBody] Product model, [FromServices] DataContext context)
         {
             if (!ModelState.IsValid)
@@ -94,7 +101,7 @@ namespace SHOP.Controllers
         [Route("{id:int}")]
         public async Task<ActionResult<List<Product>>> Delete(int id, [FromServices] DataContext context)
         {
-            var product = await context.Categories.FirstOrDefaultAsync(c => c.Id == id);
+            var product = await context.Products.FirstOrDefaultAsync(c => c.Id == id);
             if (product == null)
             {
                 return NotFound(new { message = "Produto não encontrado" });
@@ -102,7 +109,7 @@ namespace SHOP.Controllers
 
             try
             {
-                context.Categories.Remove(product);
+                context.Products.Remove(product);
                 await context.SaveChangesAsync();
                 return Ok(new { message = "Produto removido com sucesso" });
             }
